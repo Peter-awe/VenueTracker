@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AcademicTracker — Submission Management</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#f5f6fa;color:#2c3e50;line-height:1.6}
+.app-header{background:#fff;border-bottom:2px solid #e8e8e8;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.app-title{font-size:22px;font-weight:700;color:#2c3e50}
+.tab-bar{display:flex;gap:4px}
+.tab-btn{padding:10px 20px;border:none;background:transparent;cursor:pointer;font-size:14px;font-weight:600;color:#7f8c8d;border-bottom:3px solid transparent;transition:all .2s;border-radius:6px 6px 0 0;white-space:nowrap}
+.tab-btn:hover{color:#2c3e50;background:#f0f0f0}
+.tab-btn.active{color:#3498db;border-bottom-color:#3498db;background:#eaf2fb}
+.container{max-width:1280px;margin:0 auto;padding:24px}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Cards */
+.card{background:#fff;border-radius:10px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:16px;border:1px solid #eee;transition:box-shadow .2s}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+
+/* Paper buttons */
+.paper-buttons{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.paper-btn{padding:10px 18px;border:2px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+.paper-btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,.1)}
+.paper-btn.active{border-color:currentColor;box-shadow:0 0 0 2px currentColor}
+
+/* Venue cards */
+.venue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
+.venue-card{background:#fff;border-radius:10px;padding:18px;border:1px solid #eee;box-shadow:0 2px 6px rgba(0,0,0,.04);transition:all .2s;cursor:pointer}
+.venue-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.1);transform:translateY(-1px)}
+.venue-card.expanded{grid-column:1/-1}
+.venue-name{font-size:16px;font-weight:700;color:#2c3e50}
+.venue-full{font-size:12px;color:#7f8c8d;margin-top:2px}
+.venue-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.venue-tag{font-size:11px;padding:3px 8px;border-radius:12px;font-weight:600}
+.tag-journal{background:#eaf2fb;color:#2980b9}
+.tag-conference{background:#fdebd0;color:#e67e22}
+.tag-workshop{background:#d5f5e3;color:#27ae60}
+.venue-tier{color:#f39c12;font-size:13px;letter-spacing:1px}
+.venue-details{margin-top:12px;padding-top:12px;border-top:1px solid #eee;font-size:13px;color:#555;display:none}
+.venue-card.expanded .venue-details{display:block}
+.paper-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;color:#fff;font-weight:600;margin:2px}
+
+/* Search/filter */
+.search-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.search-input{flex:1;min-width:200px;padding:10px 16px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;transition:border .2s}
+.search-input:focus{border-color:#3498db}
+.filter-btn{padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.filter-btn.active{background:#3498db;color:#fff;border-color:#3498db}
+
+/* Status badges */
+.status-badge{display:inline-block;padding:4px 12px;border-radius:16px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;transition:all .2s;user-select:none}
+.status-badge:hover{opacity:.85;transform:scale(1.05)}
+
+/* Table */
+.sub-table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.sub-table th{background:#f8f9fa;padding:12px 16px;text-align:left;font-size:13px;color:#7f8c8d;font-weight:600;border-bottom:2px solid #eee}
+.sub-table td{padding:12px 16px;border-bottom:1px solid #f0f0f0;font-size:14px}
+.sub-table tr:hover td{background:#fafbfc}
+.sub-table tr{cursor:pointer}
+
+/* Timeline */
+.timeline{padding:8px 0 8px 24px;border-left:2px solid #ddd;margin:8px 0 8px 20px}
+.timeline-item{position:relative;padding:6px 0 6px 20px;font-size:13px;color:#555}
+.timeline-item::before{content:'';position:absolute;left:-7px;top:12px;width:12px;height:12px;border-radius:50%;background:#3498db;border:2px solid #fff;box-shadow:0 0 0 2px #3498db}
+.timeline-item .tl-date{font-weight:600;color:#2c3e50;margin-right:8px}
+.timeline-row{display:none}
+.timeline-row.open{display:table-row}
+.timeline-row td{padding:0 16px 16px 16px;background:#fafbfc}
+
+/* Calendar */
+.cal-month{margin-bottom:28px}
+.cal-month-title{font-size:18px;font-weight:700;color:#2c3e50;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #eee}
+.cal-item{display:flex;align-items:flex-start;padding:10px 16px;margin-bottom:6px;border-radius:8px;border-left:4px solid;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.cal-item.type-submission{border-left-color:#3498db}
+.cal-item.type-si{border-left-color:#e67e22}
+.cal-item.type-event{border-left-color:#27ae60}
+.cal-item.past{opacity:.45}
+.cal-date{font-weight:700;min-width:100px;color:#2c3e50;font-size:14px}
+.cal-label{flex:1;font-size:14px}
+.cal-countdown{font-size:12px;font-weight:600;padding:3px 10px;border-radius:12px;white-space:nowrap;margin-left:8px}
+.countdown-red{background:#fde8e8;color:#e74c3c}
+.countdown-yellow{background:#fef9e7;color:#e67e22}
+.countdown-green{background:#eafaf1;color:#27ae60}
+.countdown-gray{background:#eee;color:#999}
+
+/* SI cards */
+.si-card{background:#fff;border-radius:10px;padding:20px;border:1px solid #eee;box-shadow:0 2px 6px rgba(0,0,0,.04);margin-bottom:14px;border-left:5px solid}
+.si-card.urgency-red{border-left-color:#e74c3c}
+.si-card.urgency-yellow{border-left-color:#f39c12}
+.si-card.urgency-green{border-left-color:#27ae60}
+.si-card.urgency-expired{border-left-color:#95a5a6;opacity:.6}
+.si-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.si-title{font-size:15px;font-weight:700;color:#2c3e50}
+.si-venue{font-size:13px;color:#7f8c8d;margin-top:2px}
+.si-deadline-badge{font-size:12px;font-weight:600;padding:4px 12px;border-radius:16px;white-space:nowrap}
+.si-desc{font-size:13px;color:#555;margin-top:10px}
+.si-footer{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.si-link{font-size:12px;color:#3498db;text-decoration:none}
+.si-link:hover{text-decoration:underline}
+.si-delete{font-size:11px;color:#e74c3c;cursor:pointer;margin-left:auto;padding:2px 8px;border:1px solid #e74c3c;border-radius:6px;background:transparent}
+.si-delete:hover{background:#fde8e8}
+
+/* Match section */
+.match-info{background:#fff;border-radius:10px;padding:24px;border:1px solid #eee;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px}
+.match-info h3{font-size:18px;margin-bottom:4px}
+.match-info .meta{font-size:13px;color:#7f8c8d;margin-bottom:12px}
+.match-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.match-card{padding:14px;border:1px solid #eee;border-radius:8px;transition:all .2s;position:relative}
+.match-card:hover{border-color:#3498db;box-shadow:0 2px 8px rgba(52,152,219,.15)}
+.match-card.is-target{border-color:#27ae60;background:#f0faf4}
+.match-card .mc-name{font-weight:700;font-size:15px}
+.match-card .mc-full{font-size:11px;color:#7f8c8d}
+.match-card .mc-notes{font-size:12px;color:#555;margin-top:6px}
+.match-card .mc-meta{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;font-size:11px}
+.target-check{position:absolute;top:10px;right:10px;font-size:18px}
+.fit-high{border-left:4px solid #27ae60}
+.fit-medium{border-left:4px solid #f39c12}
+.fit-low{border-left:4px solid #95a5a6}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:200;justify-content:center;align-items:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+.modal h2{font-size:18px;margin-bottom:16px}
+.modal label{display:block;font-size:13px;font-weight:600;margin-bottom:4px;color:#555}
+.modal input,.modal select,.modal textarea{width:100%;padding:8px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:12px;font-family:inherit}
+.modal textarea{min-height:80px;resize:vertical}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.btn{padding:8px 20px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:#3498db;color:#fff}
+.btn-primary:hover{background:#2980b9}
+.btn-secondary{background:#eee;color:#555}
+.btn-secondary:hover{background:#ddd}
+.btn-add{padding:10px 20px;border:2px dashed #bbb;border-radius:8px;background:transparent;cursor:pointer;font-size:14px;font-weight:600;color:#7f8c8d;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-add:hover{border-color:#3498db;color:#3498db}
+.checkbox-group{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.checkbox-group label{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer;padding:4px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:0}
+.checkbox-group label:has(input:checked){background:#eaf2fb;border-color:#3498db}
+.checkbox-group input[type=checkbox]{width:auto;margin:0}
+
+/* Reviewer goal */
+.reviewer-goal{display:inline-block;font-size:11px;padding:2px 6px;border-radius:8px;background:#fff3cd;color:#856404;font-weight:600}
+
+.empty-state{text-align:center;padding:40px 20px;color:#95a5a6;font-size:15px}
+.footer{text-align:center;padding:20px;font-size:12px;color:#bbb;margin-top:20px}
+
+/* Event modal add button */
+.add-event-inline{font-size:12px;color:#3498db;cursor:pointer;padding:4px 10px;border:1px dashed #3498db;border-radius:6px;background:transparent;margin-top:4px}
+.add-event-inline:hover{background:#eaf2fb}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-title">AcademicTracker</div>
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="match">Paper-Venue Match</button>
+    <button class="tab-btn" data-tab="si">Special Issues</button>
+    <button class="tab-btn" data-tab="calendar">Deadline Calendar</button>
+    <button class="tab-btn" data-tab="status">Submission Status</button>
+    <button class="tab-btn" data-tab="venues">Venue Database</button>
+  </nav>
+</header>
+
+<div class="container">
+  <!-- Tab 1: Match -->
+  <div id="tab-match" class="tab-content active"></div>
+  <!-- Tab 2: Special Issues -->
+  <div id="tab-si" class="tab-content"></div>
+  <!-- Tab 3: Calendar -->
+  <div id="tab-calendar" class="tab-content"></div>
+  <!-- Tab 4: Status -->
+  <div id="tab-status" class="tab-content"></div>
+  <!-- Tab 5: Venues -->
+  <div id="tab-venues" class="tab-content"></div>
+</div>
+
+<!-- SI Modal -->
+<div class="modal-overlay" id="si-modal">
+  <div class="modal">
+    <h2>Add Special Issue</h2>
+    <label>Journal / Conference</label>
+    <select id="si-venue"></select>
+    <label>Title</label>
+    <input type="text" id="si-title" placeholder="Special Issue title">
+    <label>Deadline</label>
+    <input type="date" id="si-deadline">
+    <label>Description</label>
+    <textarea id="si-desc" placeholder="Topic description, guest editors, etc."></textarea>
+    <label>Link (URL)</label>
+    <input type="url" id="si-url" placeholder="https://...">
+    <label>Related Papers</label>
+    <div class="checkbox-group" id="si-papers"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeSIModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSI()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Event Modal -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal">
+    <h2>Add Timeline Event</h2>
+    <label>Paper</label>
+    <select id="ev-paper"></select>
+    <label>Date</label>
+    <input type="date" id="ev-date">
+    <label>Event Description</label>
+    <input type="text" id="ev-desc" placeholder="e.g., Submitted first draft">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeEventModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEvent()">Save</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">AcademicTracker v1.0</footer>
+
+<script>
+// ========== DATA ==========
+const TODAY = new Date();
+TODAY.setHours(0,0,0,0);
+
+const VENUES = [
+  {id:"nature",name:"Nature",full_name:"Nature",type:"journal",publisher:"Springer Nature",field:"Multidisciplinary Science",tier:"A+",impact_factor:"64.8",acceptance_rate:"~8%",review_cycle:"2-6 months",frequency:"Weekly",website:"https://www.nature.com/",my_papers:["PaperA"],fit_notes:"Flagship multidisciplinary journal, extremely competitive",reviewer_goal:false},
+  {id:"tpami",name:"IEEE TPAMI",full_name:"IEEE Transactions on Pattern Analysis and Machine Intelligence",type:"journal",publisher:"IEEE",field:"Computer Vision & Pattern Recognition",tier:"A",impact_factor:"23.6",acceptance_rate:"~15%",review_cycle:"3-8 months",frequency:"Monthly",website:"https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=34",my_papers:["PaperA","PaperB"],fit_notes:"Top venue for pattern recognition and ML methods",reviewer_goal:true},
+  {id:"neurips",name:"NeurIPS",full_name:"Conference on Neural Information Processing Systems",type:"conference",publisher:"NeurIPS Foundation",field:"Machine Learning",tier:"A+",impact_factor:"-",acceptance_rate:"~25%",review_cycle:"3 months",frequency:"Annual, December",website:"https://neurips.cc/",my_papers:["PaperB","PaperC"],fit_notes:"Premier ML conference, highly competitive",reviewer_goal:false},
+  {id:"icml",name:"ICML",full_name:"International Conference on Machine Learning",type:"conference",publisher:"IMLS",field:"Machine Learning",tier:"A+",impact_factor:"-",acceptance_rate:"~25%",review_cycle:"3 months",frequency:"Annual, July",website:"https://icml.cc/",my_papers:["PaperB"],fit_notes:"Top-tier ML conference alongside NeurIPS",reviewer_goal:false},
+  {id:"acl",name:"ACL",full_name:"Annual Meeting of the Association for Computational Linguistics",type:"conference",publisher:"ACL",field:"Natural Language Processing",tier:"A",impact_factor:"-",acceptance_rate:"~25%",review_cycle:"3 months",frequency:"Annual, July",website:"https://www.aclweb.org/",my_papers:["PaperA","PaperC"],fit_notes:"Top NLP venue, strong on language understanding",reviewer_goal:true},
+  {id:"cvpr",name:"CVPR",full_name:"IEEE/CVF Conference on Computer Vision and Pattern Recognition",type:"conference",publisher:"IEEE/CVF",field:"Computer Vision",tier:"A",impact_factor:"-",acceptance_rate:"~25%",review_cycle:"3 months",frequency:"Annual, June",website:"https://cvpr.thecvf.com/",my_papers:["PaperB"],fit_notes:"Premier computer vision conference",reviewer_goal:false},
+  {id:"aaai",name:"AAAI",full_name:"AAAI Conference on Artificial Intelligence",type:"conference",publisher:"AAAI",field:"Artificial Intelligence",tier:"A",impact_factor:"-",acceptance_rate:"~20%",review_cycle:"3 months",frequency:"Annual, February",website:"https://aaai.org/",my_papers:["PaperB","PaperC"],fit_notes:"Broad AI conference, good for interdisciplinary work",reviewer_goal:false},
+  {id:"artint",name:"Artificial Intelligence",full_name:"Artificial Intelligence",type:"journal",publisher:"Elsevier",field:"Artificial Intelligence",tier:"A",impact_factor:"14.4",acceptance_rate:"~15%",review_cycle:"3-6 months",frequency:"Monthly",website:"https://www.sciencedirect.com/journal/artificial-intelligence",my_papers:["PaperA","PaperC"],fit_notes:"Oldest and most established AI journal",reviewer_goal:true}
+];
+
+const MY_PAPERS = [
+  {id:"PaperA",label:"Paper A: Survey on X",title:"A Survey on X: Methods, Challenges, and Future Directions",status:"writing",target_venue:"nature",deadline:"2026-09-01",color:"#e74c3c",notes:"Draft in progress, 45 references collected, outline finalized"},
+  {id:"PaperB",label:"Paper B: Novel Method for Y",title:"A Novel Method for Y Using Deep Representation Learning",status:"experimenting",target_venue:"neurips",deadline:"2026-05-22",color:"#3498db",notes:"Baseline experiments running, ablation study planned"},
+  {id:"PaperC",label:"Paper C: Application of Z",title:"Application of Z in Real-World Scenarios",status:"idea",target_venue:"acl",deadline:null,color:"#2ecc71",notes:"Initial concept, literature review pending"}
+];
+
+const SUBMISSIONS = [
+  {paper:"PaperA",venue:"nature",status:"writing",timeline:[
+    {date:"2026-01-10",event:"Started literature search"},
+    {date:"2026-02-15",event:"Completed reading 40 papers"},
+    {date:"2026-03-01",event:"Outline finalized with co-authors"},
+    {date:"2026-03-20",event:"Introduction and related work drafted"},
+    {date:"2026-09-01",event:"Target submission deadline"}
+  ]},
+  {paper:"PaperB",venue:"neurips",status:"experimenting",timeline:[
+    {date:"2026-01-20",event:"Idea formalized, started coding"},
+    {date:"2026-02-10",event:"Baseline model implemented"},
+    {date:"2026-03-15",event:"First set of experiments completed"},
+    {date:"2026-04-01",event:"Ablation study design finalized"},
+    {date:"2026-05-22",event:"NeurIPS 2026 submission deadline"}
+  ]},
+  {paper:"PaperC",venue:"acl",status:"idea",timeline:[
+    {date:"2026-03-05",event:"Concept proposed during lab meeting"},
+    {date:"2026-03-15",event:"Preliminary feasibility analysis"}
+  ]}
+];
+
+const DEADLINES = [
+  {date:"2026-05-22",label:"NeurIPS 2026 Abstract Deadline",type:"submission",paper:"PaperB"},
+  {date:"2026-06-15",label:"ICML 2027 Workshop Proposals",type:"event",paper:null},
+  {date:"2026-07-10",label:"ACL 2027 (estimated)",type:"submission",paper:"PaperC"},
+  {date:"2026-09-01",label:"Nature Submission Target",type:"submission",paper:"PaperA"}
+];
+
+const STATUS_LIST = [
+  {key:"idea",label:"Idea",icon:"\ud83d\udca1",color:"#95a5a6"},
+  {key:"experimenting",label:"Experimenting",icon:"\ud83d\udd2c",color:"#3498db"},
+  {key:"writing",label:"Writing",icon:"\u270d\ufe0f",color:"#e67e22"},
+  {key:"ready",label:"Ready",icon:"\u2705",color:"#27ae60"},
+  {key:"submitted",label:"Submitted",icon:"\ud83d\udce4",color:"#8e44ad"},
+  {key:"under_review",label:"Under Review",icon:"\ud83d\udd0d",color:"#f1c40f"},
+  {key:"revision",label:"Revision",icon:"\u270f\ufe0f",color:"#e67e22"},
+  {key:"accepted",label:"Accepted",icon:"\ud83c\udf89",color:"#27ae60"},
+  {key:"rejected",label:"Rejected",icon:"\u274c",color:"#c0392b"}
+];
+
+// ========== HELPERS ==========
+function getVenue(id){ return VENUES.find(v=>v.id===id); }
+function getPaper(id){ return MY_PAPERS.find(p=>p.id===id); }
+function tierStars(t){ return t==='A+'?'\u2b50\u2b50\u2b50':t==='A'?'\u2b50\u2b50':t==='B'?'\u2b50':''; }
+function typeLabel(t){ return t==='journal'?'Journal':t==='conference'?'Conference':'Workshop'; }
+function typeClass(t){ return 'tag-'+t; }
+
+function daysBetween(d1,d2){
+  const a=new Date(d1);a.setHours(0,0,0,0);
+  const b=new Date(d2);b.setHours(0,0,0,0);
+  return Math.round((b-a)/(1000*60*60*24));
+}
+
+function countdownBadge(dateStr){
+  const d=daysBetween(TODAY,new Date(dateStr));
+  if(d<0) return '<span class="cal-countdown countdown-gray">'+Math.abs(d)+' days ago</span>';
+  if(d===0) return '<span class="cal-countdown countdown-red">Today</span>';
+  if(d<30) return '<span class="cal-countdown countdown-red">'+d+' days left</span>';
+  if(d<90) return '<span class="cal-countdown countdown-yellow">'+d+' days left</span>';
+  return '<span class="cal-countdown countdown-green">'+d+' days left</span>';
+}
+
+function urgencyClass(dateStr){
+  const d=daysBetween(TODAY,new Date(dateStr));
+  if(d<0) return 'urgency-expired';
+  if(d<30) return 'urgency-red';
+  if(d<90) return 'urgency-yellow';
+  return 'urgency-green';
+}
+
+function paperBadge(pid){
+  const p=getPaper(pid);
+  if(!p) return '';
+  return '<span class="paper-badge" style="background:'+p.color+'">'+p.id+'</span>';
+}
+
+function getStatusObj(key){
+  return STATUS_LIST.find(s=>s.key===key)||STATUS_LIST[0];
+}
+
+function getStoredStatus(paperId){
+  const d=JSON.parse(localStorage.getItem('academic_tracker_status')||'{}');
+  return d[paperId]||null;
+}
+function setStoredStatus(paperId,status){
+  const d=JSON.parse(localStorage.getItem('academic_tracker_status')||'{}');
+  d[paperId]=status;
+  localStorage.setItem('academic_tracker_status',JSON.stringify(d));
+}
+
+function getEffectiveStatus(paperId){
+  return getStoredStatus(paperId)||getPaper(paperId).status;
+}
+
+function getSpecialIssues(){
+  return JSON.parse(localStorage.getItem('academic_tracker_si')||'[]');
+}
+function saveSpecialIssues(arr){
+  localStorage.setItem('academic_tracker_si',JSON.stringify(arr));
+}
+
+function getTimelineEvents(){
+  return JSON.parse(localStorage.getItem('academic_tracker_events')||'[]');
+}
+function saveTimelineEvents(arr){
+  localStorage.setItem('academic_tracker_events',JSON.stringify(arr));
+}
+
+// ========== TAB SWITCHING ==========
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ========== TAB 1: MATCH ==========
+function renderMatch(){
+  const el=document.getElementById('tab-match');
+  let html='<div class="paper-buttons">';
+  MY_PAPERS.forEach(p=>{
+    html+='<button class="paper-btn" data-paper="'+p.id+'" style="color:'+p.color+';border-color:#ddd" onclick="selectPaper(\''+p.id+'\')">'+p.label+'</button>';
+  });
+  html+='</div><div id="match-result"></div>';
+  el.innerHTML=html;
+  selectPaper('PaperA');
+}
+
+function selectPaper(pid){
+  document.querySelectorAll('.paper-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.paper===pid);
+    if(b.dataset.paper===pid){
+      b.style.borderColor=getPaper(pid).color;
+    } else {
+      b.style.borderColor='#ddd';
+    }
+  });
+  const p=getPaper(pid);
+  const st=getStatusObj(getEffectiveStatus(pid));
+  const targetV=p.target_venue?getVenue(p.target_venue):null;
+
+  // Find matching venues
+  const matching=VENUES.filter(v=>v.my_papers.includes(pid));
+
+  // Sort by fit level: target first, then tier, then reviewer_goal
+  const tierOrder={'A+':0,'A':1,'B':2,'C':3};
+  matching.sort((a,b)=>{
+    if(a.id===p.target_venue) return -1;
+    if(b.id===p.target_venue) return 1;
+    const ta=tierOrder[a.tier]||3, tb=tierOrder[b.tier]||3;
+    if(ta!==tb) return ta-tb;
+    if(a.reviewer_goal&&!b.reviewer_goal) return -1;
+    if(!a.reviewer_goal&&b.reviewer_goal) return 1;
+    return 0;
+  });
+
+  let html='<div class="match-info">';
+  html+='<h3 style="color:'+p.color+'">'+p.title+'</h3>';
+  html+='<div class="meta">';
+  html+='<span class="status-badge" style="background:'+st.color+'">'+st.icon+' '+st.label+'</span>';
+  html+='&nbsp;&nbsp;Target: <strong>'+(targetV?targetV.name:'Undecided')+'</strong>';
+  if(p.deadline) html+='&nbsp;&nbsp;Deadline: <strong>'+p.deadline+'</strong> '+countdownBadge(p.deadline);
+  html+='</div>';
+  html+='<div style="font-size:13px;color:#555;margin-bottom:4px">'+p.notes+'</div>';
+  html+='</div>';
+
+  html+='<h3 style="margin-bottom:12px">Recommended Venues ('+matching.length+' matches)</h3>';
+  html+='<div class="match-list">';
+  matching.forEach(v=>{
+    const isTarget=v.id===p.target_venue;
+    const fitClass=isTarget?'fit-high':(tierOrder[v.tier]<=1?'fit-medium':'fit-low');
+    html+='<div class="match-card '+fitClass+' '+(isTarget?'is-target':'')+'">';
+    if(isTarget) html+='<span class="target-check">\u2705</span>';
+    html+='<div class="mc-name">'+v.name+' '+tierStars(v.tier)+'</div>';
+    html+='<div class="mc-full">'+v.full_name+'</div>';
+    html+='<div class="mc-notes">'+v.fit_notes+'</div>';
+    html+='<div class="mc-meta">';
+    html+='<span class="venue-tag '+typeClass(v.type)+'">'+typeLabel(v.type)+'</span>';
+    if(v.impact_factor!=='-') html+='<span style="color:#555">IF: '+v.impact_factor+'</span>';
+    html+='<span style="color:#555">Acceptance: '+v.acceptance_rate+'</span>';
+    html+='<span style="color:#555">Review: '+v.review_cycle+'</span>';
+    if(v.reviewer_goal) html+='<span class="reviewer-goal">\ud83c\udfaf Review Goal</span>';
+    html+='</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('match-result').innerHTML=html;
+}
+
+// ========== TAB 2: SPECIAL ISSUES ==========
+function renderSI(){
+  const el=document.getElementById('tab-si');
+  const sis=getSpecialIssues();
+
+  // Sort by deadline
+  sis.sort((a,b)=>{
+    if(!a.deadline) return 1;
+    if(!b.deadline) return -1;
+    return new Date(a.deadline)-new Date(b.deadline);
+  });
+
+  let html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2>Special Issues / Calls for Papers</h2><button class="btn-add" onclick="openSIModal()">\u2795 Add Special Issue</button></div>';
+
+  if(sis.length===0){
+    html+='<div class="empty-state">No special issues yet. Click the button above to add one.</div>';
+  } else {
+    sis.forEach((si,idx)=>{
+      const uc=si.deadline?urgencyClass(si.deadline):'urgency-green';
+      const cb=si.deadline?countdownBadge(si.deadline):'<span class="cal-countdown countdown-gray">No deadline</span>';
+      html+='<div class="si-card '+uc+'">';
+      html+='<div class="si-header"><div>';
+      html+='<div class="si-title">'+si.title+'</div>';
+      html+='<div class="si-venue">'+(si.venue_name||si.venue)+'</div>';
+      html+='</div><div>'+(si.deadline?'<strong>'+si.deadline+'</strong><br>':'')+' '+cb+'</div></div>';
+      if(si.description) html+='<div class="si-desc">'+si.description+'</div>';
+      html+='<div class="si-footer">';
+      (si.papers||[]).forEach(pid=>{ html+=paperBadge(pid); });
+      if(si.url) html+='<a class="si-link" href="'+si.url+'" target="_blank">\ud83d\udd17 Link</a>';
+      html+='<button class="si-delete" onclick="deleteSI('+idx+')">Delete</button>';
+      html+='</div></div>';
+    });
+  }
+  el.innerHTML=html;
+}
+
+function openSIModal(){
+  const sel=document.getElementById('si-venue');
+  sel.innerHTML='<option value="">Select journal/conference</option>'+VENUES.map(v=>'<option value="'+v.id+'">'+v.name+' - '+v.full_name+'</option>').join('');
+  const pg=document.getElementById('si-papers');
+  pg.innerHTML=MY_PAPERS.map(p=>'<label><input type="checkbox" value="'+p.id+'"> '+p.label+'</label>').join('');
+  document.getElementById('si-title').value='';
+  document.getElementById('si-deadline').value='';
+  document.getElementById('si-desc').value='';
+  document.getElementById('si-url').value='';
+  document.getElementById('si-modal').classList.add('open');
+}
+function closeSIModal(){ document.getElementById('si-modal').classList.remove('open'); }
+
+function saveSI(){
+  const venueId=document.getElementById('si-venue').value;
+  const title=document.getElementById('si-title').value.trim();
+  const deadline=document.getElementById('si-deadline').value;
+  const desc=document.getElementById('si-desc').value.trim();
+  const url=document.getElementById('si-url').value.trim();
+  const papers=Array.from(document.querySelectorAll('#si-papers input:checked')).map(c=>c.value);
+
+  if(!title){alert('Please enter a title.');return;}
+
+  const v=getVenue(venueId);
+  const sis=getSpecialIssues();
+  sis.push({venue:venueId,venue_name:v?v.name:'',title,deadline,description:desc,url,papers});
+  saveSpecialIssues(sis);
+  closeSIModal();
+  renderSI();
+  renderCalendar();
+}
+
+function deleteSI(idx){
+  if(!confirm('Are you sure you want to delete this Special Issue?')) return;
+  const sis=getSpecialIssues();
+  sis.splice(idx,1);
+  saveSpecialIssues(sis);
+  renderSI();
+  renderCalendar();
+}
+
+// ========== TAB 3: CALENDAR ==========
+function renderCalendar(){
+  const el=document.getElementById('tab-calendar');
+
+  // Collect all events
+  let events=[];
+
+  // Fixed deadlines
+  DEADLINES.forEach(d=>{
+    const typeIcon=d.type==='submission'?'\ud83d\udcdd':d.type==='si'?'\ud83d\udce2':'\ud83d\udccb';
+    events.push({date:d.date,label:typeIcon+' '+d.label,type:d.type,paper:d.paper});
+  });
+
+  // Special issues deadlines
+  getSpecialIssues().forEach(si=>{
+    if(si.deadline){
+      events.push({date:si.deadline,label:'\ud83d\udce2 [SI] '+si.title+(si.venue_name?' ('+si.venue_name+')':''),type:'si',paper:null});
+    }
+  });
+
+  // Custom timeline events added by user
+  getTimelineEvents().forEach(te=>{
+    events.push({date:te.date,label:'\ud83d\udccb '+te.desc+' ('+te.paper+')',type:'event',paper:te.paper});
+  });
+
+  // Sort
+  events.sort((a,b)=>a.date.localeCompare(b.date));
+
+  // Group by month
+  const months={};
+  events.forEach(e=>{
+    const key=e.date.substring(0,7);
+    if(!months[key]) months[key]=[];
+    months[key].push(e);
+  });
+
+  let html='<h2 style="margin-bottom:16px">Deadline Calendar</h2>';
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  Object.keys(months).sort().forEach(key=>{
+    const [y,m]=key.split('-');
+    const mName=monthNames[parseInt(m)-1];
+    html+='<div class="cal-month"><div class="cal-month-title">'+mName+' '+y+'</div>';
+    months[key].forEach(e=>{
+      const isPast=new Date(e.date)<TODAY;
+      const tClass=e.type==='submission'?'type-submission':e.type==='si'?'type-si':'type-event';
+      html+='<div class="cal-item '+tClass+' '+(isPast?'past':'')+'">';
+      html+='<div class="cal-date">'+e.date+'</div>';
+      html+='<div class="cal-label">'+e.label+(e.paper?' <span style="font-size:12px;color:#7f8c8d">('+(getPaper(e.paper)?getPaper(e.paper).label:e.paper)+')</span>':'')+'</div>';
+      html+=(!isPast?countdownBadge(e.date):'<span class="cal-countdown countdown-gray">Passed</span>');
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+
+  if(events.length===0){
+    html+='<div class="empty-state">No calendar events yet.</div>';
+  }
+
+  el.innerHTML=html;
+}
+
+// ========== TAB 4: STATUS ==========
+function renderStatus(){
+  const el=document.getElementById('tab-status');
+
+  let html='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2>Submission Status</h2><button class="btn-add" onclick="openEventModal()">\u2795 Add Event</button></div>';
+  html+='<table class="sub-table"><thead><tr><th>Paper</th><th>Target Venue</th><th>Status</th><th>Last Update</th><th>Deadline</th></tr></thead><tbody>';
+
+  SUBMISSIONS.forEach((sub,si)=>{
+    const p=getPaper(sub.paper);
+    const v=sub.venue?getVenue(sub.venue):null;
+    const st=getStatusObj(getEffectiveStatus(sub.paper));
+
+    // Get all timeline events (built-in + custom)
+    let allTl=[...sub.timeline];
+    getTimelineEvents().filter(te=>te.paper===sub.paper).forEach(te=>{
+      allTl.push({date:te.date,event:te.desc});
+    });
+    allTl.sort((a,b)=>a.date.localeCompare(b.date));
+
+    const lastEvent=allTl[allTl.length-1];
+
+    html+='<tr onclick="toggleTimeline('+si+')" style="cursor:pointer">';
+    html+='<td><strong style="color:'+p.color+'">'+p.label+'</strong></td>';
+    html+='<td>'+(v?v.name:'Undecided')+'</td>';
+    html+='<td><span class="status-badge" style="background:'+st.color+'" onclick="event.stopPropagation();cycleStatus(\''+sub.paper+'\',this)" title="Click to cycle status">'+st.icon+' '+st.label+'</span></td>';
+    html+='<td style="font-size:13px">'+(lastEvent?lastEvent.date:'-')+'</td>';
+    html+='<td>'+(p.deadline?p.deadline+' '+countdownBadge(p.deadline):'-')+'</td>';
+    html+='</tr>';
+    html+='<tr class="timeline-row" id="tl-'+si+'"><td colspan="5"><div class="timeline">';
+    allTl.forEach(t=>{
+      html+='<div class="timeline-item"><span class="tl-date">'+t.date+'</span>'+t.event+'</div>';
+    });
+    html+='</div></td></tr>';
+  });
+
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+function toggleTimeline(idx){
+  document.getElementById('tl-'+idx).classList.toggle('open');
+}
+
+function cycleStatus(paperId,badge){
+  const current=getEffectiveStatus(paperId);
+  const idx=STATUS_LIST.findIndex(s=>s.key===current);
+  const next=STATUS_LIST[(idx+1)%STATUS_LIST.length];
+  setStoredStatus(paperId,next.key);
+  badge.style.background=next.color;
+  badge.innerHTML=next.icon+' '+next.label;
+  // Also re-render match tab if needed
+  const activeBtn=document.querySelector('.paper-btn.active');
+  if(activeBtn && activeBtn.dataset.paper===paperId){
+    selectPaper(paperId);
+  }
+}
+
+function openEventModal(){
+  const sel=document.getElementById('ev-paper');
+  sel.innerHTML=MY_PAPERS.map(p=>'<option value="'+p.id+'">'+p.label+'</option>').join('');
+  document.getElementById('ev-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('ev-desc').value='';
+  document.getElementById('event-modal').classList.add('open');
+}
+function closeEventModal(){ document.getElementById('event-modal').classList.remove('open'); }
+
+function saveEvent(){
+  const paper=document.getElementById('ev-paper').value;
+  const date=document.getElementById('ev-date').value;
+  const desc=document.getElementById('ev-desc').value.trim();
+  if(!desc){alert('Please enter an event description.');return;}
+  const evts=getTimelineEvents();
+  evts.push({paper,date,desc});
+  saveTimelineEvents(evts);
+  closeEventModal();
+  renderStatus();
+  renderCalendar();
+}
+
+// ========== TAB 5: VENUES ==========
+let venueFilter='all';
+let venueSearch='';
+
+function renderVenues(){
+  const el=document.getElementById('tab-venues');
+
+  let html='<div class="search-bar">';
+  html+='<input class="search-input" id="venue-search" placeholder="Search venues by name, field, publisher..." oninput="venueSearch=this.value.toLowerCase();filterVenues()">';
+  html+='<button class="filter-btn '+(venueFilter==='all'?'active':'')+'" onclick="venueFilter=\'all\';filterVenues()">All ('+VENUES.length+')</button>';
+  const jc=VENUES.filter(v=>v.type==='journal').length;
+  const cc=VENUES.filter(v=>v.type==='conference').length;
+  html+='<button class="filter-btn '+(venueFilter==='journal'?'active':'')+'" onclick="venueFilter=\'journal\';filterVenues()">Journals ('+jc+')</button>';
+  html+='<button class="filter-btn '+(venueFilter==='conference'?'active':'')+'" onclick="venueFilter=\'conference\';filterVenues()">Conferences ('+cc+')</button>';
+  html+='</div>';
+  html+='<div class="venue-grid" id="venue-grid"></div>';
+  el.innerHTML=html;
+  filterVenues();
+}
+
+function filterVenues(){
+  // Update filter button active states
+  document.querySelectorAll('#tab-venues .filter-btn').forEach(b=>{
+    const t=b.textContent.includes('All')?'all':b.textContent.includes('Journal')?'journal':'conference';
+    b.classList.toggle('active',t===venueFilter);
+  });
+
+  let filtered=VENUES;
+  if(venueFilter!=='all') filtered=filtered.filter(v=>v.type===venueFilter);
+  if(venueSearch){
+    filtered=filtered.filter(v=>{
+      const s=venueSearch;
+      return v.name.toLowerCase().includes(s)||v.full_name.toLowerCase().includes(s)||v.field.toLowerCase().includes(s)||v.publisher.toLowerCase().includes(s)||v.fit_notes.toLowerCase().includes(s);
+    });
+  }
+
+  const grid=document.getElementById('venue-grid');
+  if(!grid) return;
+
+  let html='';
+  filtered.forEach(v=>{
+    html+='<div class="venue-card" id="vc-'+v.id+'" onclick="toggleVenueCard(\''+v.id+'\')">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start"><div>';
+    html+='<div class="venue-name">'+v.name+' <span class="venue-tier">'+tierStars(v.tier)+'</span></div>';
+    html+='<div class="venue-full">'+v.full_name+'</div>';
+    html+='</div><span class="venue-tag '+typeClass(v.type)+'">'+typeLabel(v.type)+'</span></div>';
+    html+='<div class="venue-meta">';
+    if(v.impact_factor!=='-') html+='<span style="font-size:12px;color:#555">IF: <strong>'+v.impact_factor+'</strong></span>';
+    html+='<span style="font-size:12px;color:#555">Acceptance: '+v.acceptance_rate+'</span>';
+    html+='<span style="font-size:12px;color:#555">Review: '+v.review_cycle+'</span>';
+    if(v.reviewer_goal) html+='<span class="reviewer-goal">\ud83c\udfaf Review Goal</span>';
+    html+='</div>';
+    html+='<div style="margin-top:8px">';
+    v.my_papers.forEach(pid=>{ html+=paperBadge(pid); });
+    html+='</div>';
+    html+='<div class="venue-details">';
+    html+='<table style="width:100%;font-size:13px;border-collapse:collapse">';
+    html+='<tr><td style="padding:4px 8px;color:#7f8c8d;width:100px">Publisher</td><td style="padding:4px 8px">'+v.publisher+'</td></tr>';
+    html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Field</td><td style="padding:4px 8px">'+v.field+'</td></tr>';
+    html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Tier</td><td style="padding:4px 8px">'+v.tier+' '+tierStars(v.tier)+'</td></tr>';
+    if(v.impact_factor!=='-') html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Impact Factor</td><td style="padding:4px 8px">'+v.impact_factor+'</td></tr>';
+    html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Acceptance</td><td style="padding:4px 8px">'+v.acceptance_rate+'</td></tr>';
+    html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Review Cycle</td><td style="padding:4px 8px">'+v.review_cycle+'</td></tr>';
+    html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Frequency</td><td style="padding:4px 8px">'+v.frequency+'</td></tr>';
+    html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Notes</td><td style="padding:4px 8px">'+v.fit_notes+'</td></tr>';
+    html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Website</td><td style="padding:4px 8px"><a href="'+v.website+'" target="_blank" style="color:#3498db">'+v.website+'</a></td></tr>';
+    if(v.reviewer_goal) html+='<tr><td style="padding:4px 8px;color:#7f8c8d">Review Goal</td><td style="padding:4px 8px">\ud83c\udfaf Yes</td></tr>';
+    html+='</table></div></div>';
+  });
+
+  if(filtered.length===0){
+    html='<div class="empty-state" style="grid-column:1/-1">No matching venues found.</div>';
+  }
+
+  grid.innerHTML=html;
+}
+
+function toggleVenueCard(id){
+  const card=document.getElementById('vc-'+id);
+  // If already expanded, collapse, otherwise expand (and collapse others)
+  if(card.classList.contains('expanded')){
+    card.classList.remove('expanded');
+  } else {
+    document.querySelectorAll('.venue-card.expanded').forEach(c=>c.classList.remove('expanded'));
+    card.classList.add('expanded');
+  }
+}
+
+// ========== INIT ==========
+renderMatch();
+renderSI();
+renderCalendar();
+renderStatus();
+renderVenues();
+</script>
+</body>
+</html>
