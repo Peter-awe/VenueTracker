@@ -1,4 +1,4 @@
-# AcademicTracker — Submission Management Dashboard
+# VenueTracker — Submission Management Dashboard
 
 A single-file, offline tool for managing academic paper submissions, tracking deadlines, and discovering publication opportunities.
 

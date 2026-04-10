@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AcademicTracker — Submission Management</title>
+<title>VenueTracker — Submission Management</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#f5f6fa;color:#2c3e50;line-height:1.6}
@@ -156,7 +156,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
 <body>
 
 <header class="app-header">
-  <div class="app-title">AcademicTracker</div>
+  <div class="app-title">VenueTracker</div>
   <nav class="tab-bar">
     <button class="tab-btn active" data-tab="match">Paper-Venue Match</button>
     <button class="tab-btn" data-tab="si">Special Issues</button>
@@ -219,7 +219,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
   </div>
 </div>
 
-<footer class="footer">AcademicTracker v1.0</footer>
+<footer class="footer">VenueTracker v1.0</footer>
 
 <script>
 // ========== DATA ==========
@@ -324,13 +324,13 @@ function getStatusObj(key){
 }
 
 function getStoredStatus(paperId){
-  const d=JSON.parse(localStorage.getItem('academic_tracker_status')||'{}');
+  const d=JSON.parse(localStorage.getItem('venue_tracker_status')||'{}');
   return d[paperId]||null;
 }
 function setStoredStatus(paperId,status){
-  const d=JSON.parse(localStorage.getItem('academic_tracker_status')||'{}');
+  const d=JSON.parse(localStorage.getItem('venue_tracker_status')||'{}');
   d[paperId]=status;
-  localStorage.setItem('academic_tracker_status',JSON.stringify(d));
+  localStorage.setItem('venue_tracker_status',JSON.stringify(d));
 }
 
 function getEffectiveStatus(paperId){
@@ -338,17 +338,17 @@ function getEffectiveStatus(paperId){
 }
 
 function getSpecialIssues(){
-  return JSON.parse(localStorage.getItem('academic_tracker_si')||'[]');
+  return JSON.parse(localStorage.getItem('venue_tracker_si')||'[]');
 }
 function saveSpecialIssues(arr){
-  localStorage.setItem('academic_tracker_si',JSON.stringify(arr));
+  localStorage.setItem('venue_tracker_si',JSON.stringify(arr));
 }
 
 function getTimelineEvents(){
-  return JSON.parse(localStorage.getItem('academic_tracker_events')||'[]');
+  return JSON.parse(localStorage.getItem('venue_tracker_events')||'[]');
 }
 function saveTimelineEvents(arr){
-  localStorage.setItem('academic_tracker_events',JSON.stringify(arr));
+  localStorage.setItem('venue_tracker_events',JSON.stringify(arr));
 }
 
 // ========== TAB SWITCHING ==========
